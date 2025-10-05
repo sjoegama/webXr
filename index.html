@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dog Animation + Audio Sinkron</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<style>
+body {
+  margin:0;
+  background:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+  font-family:sans-serif;
+}
+model-viewer {
+  width:600px;
+  height:400px;
+}
+.controls {
+  display:flex;
+  gap:12px;
+  margin-top:10px;
+}
+button {
+  padding:10px 24px;
+  font-size:14px;
+  font-weight:bold;
+  color:white;
+  background-color:#87CEFA;
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+button:hover {
+  transform: translateY(-2px);
+  box-shadow:0 6px 8px rgba(0,0,0,0.15);
+}
+</style>
+</head>
+<body>
+
+<model-viewer 
+  id="dogModel"
+  src="Dog.glb"
+  ios-src="Dog.usdz"
+  autoplay
+  camera-controls
+  auto-rotate
+  background-color="#ffffff">
+</model-viewer>
+
+<audio id="dogAudio" muted>
+  <source src="Dog.mp3" type="audio/mpeg">
+  <source src="Dog.m4a" type="audio/mp4">
+  Browser tidak mendukung audio.
+</audio>
+
+<div class="controls">
+  <button id="playBtn">Play</button>
+  <button id="pauseBtn">Pause</button>
+  <button id="stopBtn">Stop</button>
+</div>
+
+<script type="module">
+const model = document.getElementById('dogModel');
+const audio = document.getElementById('dogAudio');
+let syncRAF;
+
+// Pause animasi di awal
+model.pause();
+
+// Fungsi sinkronisasi: animasi mengontrol audio
+function syncAudioWithAnimation() {
+  if (!audio.paused && !model.paused) {
+    const diff = audio.currentTime - model.currentTime;
+    if (Math.abs(diff) > 0.05) {
+      audio.currentTime = model.currentTime;
+    }
+    syncRAF = requestAnimationFrame(syncAudioWithAnimation);
+  }
+}
+
+// Tombol Play → mulai animasi + audio
+document.getElementById('playBtn').addEventListener('click', () => {
+  audio.muted = false; // buka mute
+  audio.play().then(() => {
+    model.currentTime = 0;
+    model.play();
+    if (syncRAF) cancelAnimationFrame(syncRAF);
+    syncAudioWithAnimation();
+  }).catch(err => {
+    console.log('Audio diblokir browser:', err);
+    alert('Klik tombol Play sekali lagi untuk mengizinkan audio');
+  });
+});
+
+// Tombol Pause → pause animasi + audio
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  model.pause();
+  audio.pause();
+  if (syncRAF) cancelAnimationFrame(syncRAF);
+});
+
+// Tombol Stop → pause + reset animasi dan audio
+document.getElementById('stopBtn').addEventListener('click', () => {
+  model.pause();
+  model.currentTime = 0;
+  audio.pause();
+  audio.currentTime = 0;
+  if (syncRAF) cancelAnimationFrame(syncRAF);
+});
+
+// Debug: cek audio berjalan atau pause
+audio.addEventListener('play', () => console.log('Audio mulai'));
+audio.addEventListener('pause', () => console.log('Audio pause'));
+
+// Event tambahan: saat model siap
+model.addEventListener('load', () => {
+  console.log('Model siap ditampilkan');
+});
+</script>
+
+</body>
+</html>
